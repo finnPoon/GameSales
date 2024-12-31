@@ -1,8 +1,10 @@
 package com.vanguard.vanguardapi.service;
 
 import com.opencsv.CSVWriter;
+import com.vanguard.vanguardapi.entity.CsvImportLog;
 import com.vanguard.vanguardapi.entity.GameSales;
 import com.vanguard.vanguardapi.entity.GameSalesSummary;
+import com.vanguard.vanguardapi.repository.CsvImportLogRepository;
 import com.vanguard.vanguardapi.repository.GameRepository;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
@@ -39,17 +41,10 @@ public class GameService {
     @Autowired
     private GameRepository gameRepository;
 
-    private final DataSource dataSource;
+    @Autowired
+    private CsvImportLogRepository csvImportLogRepository;
 
-    // Optional: If you need the raw credentials for some reason (less common with DataSource)
-    /*
-    @Value("${spring.datasource.url}")
-    private String dbUrl;
-    @Value("${spring.datasource.username}")
-    private String dbUser;
-    @Value("${spring.datasource.password}")
-    private String dbPassword;
-    */
+    private final DataSource dataSource;
 
     public GameService(DataSource dataSource) {
         this.dataSource = dataSource;
@@ -60,7 +55,7 @@ public class GameService {
 
     public void importCsv(MultipartFile file) throws IOException {
 
-        String targetTable = GAMES_SALES_TABLE;
+        String targetTable = "game_sales";
         String loadQuery = String.format(
                 "LOAD DATA LOCAL INFILE '%s' INTO TABLE %s " +
                         "FIELDS TERMINATED BY ',' " +
@@ -70,8 +65,16 @@ public class GameService {
                 IMPORT_FILE_PATH + file.getOriginalFilename(), targetTable
         );
 
+        // Create a new log entry
+        CsvImportLog importLog = new CsvImportLog();
+        importLog.setFileName(file.getOriginalFilename());
+        importLog.setStartTime(LocalDateTime.now());
+        importLog.setStatus(CsvImportLog.ImportStatus.IN_PROGRESS);
+        importLog.setCreatedBy("system"); // You can set this to the current user if available
+        importLog.setCreatedAt(LocalDateTime.now());
 
-        System.out.println("Query:" + loadQuery);
+        // Save the log entry before starting the import
+        csvImportLogRepository.save(importLog);
 
         try (Connection connection = dataSource.getConnection(); // Get connection from DataSource
              Statement statement = connection.createStatement()) {
@@ -79,12 +82,33 @@ public class GameService {
             // Enable local file loading if necessary
             statement.execute("SET GLOBAL local_infile = 1");
 
-
             // Execute the LOAD DATA INFILE query
             int rowsAffected = statement.executeUpdate(loadQuery);
+
+            // Update the log entry with the result
+            importLog.setEndTime(LocalDateTime.now());
+            importLog.setStatus(CsvImportLog.ImportStatus.COMPLETED);
+            importLog.setTotalRows(rowsAffected);
+            importLog.setImportedRows(rowsAffected);
+            importLog.setUpdatedBy("system");
+            importLog.setUpdatedAt(LocalDateTime.now());
+
+            // Save the updated log entry
+            csvImportLogRepository.save(importLog);
+
             System.out.printf("Successfully loaded %d rows into %s%n", rowsAffected, targetTable);
 
         } catch (SQLException e) {
+            // Update the log entry with the error
+            importLog.setEndTime(LocalDateTime.now());
+            importLog.setStatus(CsvImportLog.ImportStatus.FAILED);
+            importLog.setErrorMessage(e.getMessage());
+            importLog.setUpdatedBy("system");
+            importLog.setUpdatedAt(LocalDateTime.now());
+
+            // Save the updated log entry
+            csvImportLogRepository.save(importLog);
+
             System.err.println("Database error: " + e.getMessage());
             throw new RuntimeException("Error loading data from CSV: " + e.getMessage(), e);
         }
