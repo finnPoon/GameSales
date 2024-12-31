@@ -114,6 +114,18 @@ spring.datasource.password=<your-db-password>
 # Example dbURL
 jdbc:mysql://localhost:3306/vanguard?createDatabaseIfNotExist=true&allowLoadLocalInfile=true
 
+2) Locate the Constants.java file in the src/main/java/com.vanguard.vanguardapi/config. Update the IMPORT_FILE_PATH variable to the path where your Import CSV file will be stored at.
+(Alternatively can remove this variable and create a temp file and trasnfer the content of the MultiPart file over to get the absolute path. But this might deteriorate the performance.)
+
+3) Run the script in MySQL to check if the value is true or 1:
+SHOW VARIABLES LIKE 'secure_file_priv';
+
+If not true or 1, run the following script and restart the MySQL server:
+SET GLOBAL local_infile = 1;
+
+4) Run the script in MySQL to expand the max allowed packet size to 100MB:
+SET GLOBAL max_allowed_packet = 104857600;
+
 
 Building and Running the Application
 ---------------------------------------
