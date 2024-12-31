@@ -21,6 +21,7 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
@@ -57,29 +58,27 @@ public class GameService {
     private static final int NUM_ROWS = 1000000;
     private static final Random random = new Random();
 
-    public void importCsv2(MultipartFile file) throws IOException {
-        // Create a temporary file as MultipartFile does not have absoulute file path
-        File tempFile = File.createTempFile("temp-", ".csv");
-        tempFile.deleteOnExit(); // Ensure the temp file is deleted on exit
-
-        // Transfer the MultipartFile contents to the temporary file
-        file.transferTo(tempFile);
+    public void importCsv(MultipartFile file) throws IOException {
 
         String targetTable = GAMES_SALES_TABLE;
         String loadQuery = String.format(
-                "LOAD DATA INFILE '%s' INTO TABLE %s " +
+                "LOAD DATA LOCAL INFILE '%s' INTO TABLE %s " +
                         "FIELDS TERMINATED BY ',' " +
                         "ENCLOSED BY '\"' " +
-                        "LINES TERMINATED BY '\\n' " +
+                        "LINES TERMINATED BY '\n' " +
                         "IGNORE 1 ROWS;",
-                tempFile.getAbsoluteFile(), targetTable
+                IMPORT_FILE_PATH + file.getOriginalFilename(), targetTable
         );
+
+
+        System.out.println("Query:" + loadQuery);
 
         try (Connection connection = dataSource.getConnection(); // Get connection from DataSource
              Statement statement = connection.createStatement()) {
 
             // Enable local file loading if necessary
             statement.execute("SET GLOBAL local_infile = 1");
+
 
             // Execute the LOAD DATA INFILE query
             int rowsAffected = statement.executeUpdate(loadQuery);
@@ -89,45 +88,6 @@ public class GameService {
             System.err.println("Database error: " + e.getMessage());
             throw new RuntimeException("Error loading data from CSV: " + e.getMessage(), e);
         }
-    }
-
-    public void importCsv(MultipartFile file) throws IOException {
-        List<GameSales> gameSales = parseCsv(file);
-        gameRepository.saveAll(gameSales);
-    }
-
-    public List<GameSales> parseCsv(MultipartFile file) throws IOException {
-        List<GameSales> gameSalesList = new ArrayList<>();
-        try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
-            String[] nextLine;
-            reader.readNext();
-            while ((nextLine = reader.readNext()) != null) {
-                if (nextLine.length >= 9){
-                    GameSales gameSales = new GameSales();
-                    gameSales.setGameNo(Integer.parseInt(nextLine[1]));
-                    gameSales.setGameName(nextLine[2]);
-                    gameSales.setGameCode(nextLine[3]);
-                    gameSales.setType(Integer.parseInt(nextLine[4]));
-                    gameSales.setCostPrice(new BigDecimal(nextLine[5]));
-
-                    BigDecimal costPrice = gameSales.getCostPrice();
-                    BigDecimal taxRate = new BigDecimal("0.09");
-                    BigDecimal tax = costPrice.multiply(taxRate);
-                    BigDecimal salePrice = costPrice.add(tax);
-
-                    gameSales.setTax(tax.setScale(2, BigDecimal.ROUND_HALF_UP));
-                    gameSales.setSalePrice(salePrice.setScale(2, BigDecimal.ROUND_HALF_UP));
-                    gameSales.setDateOfSale(LocalDateTime.parse(nextLine[8]));
-                    gameSalesList.add(gameSales);
-                } else {
-                    throw new CsvValidationException("Invalid CSV format: not enough columns");
-                }
-
-            }
-        } catch (CsvValidationException | NumberFormatException | ArrayIndexOutOfBoundsException e) {
-            throw new IOException("Error parsing CSV file: " + e.getMessage(), e);
-        }
-        return gameSalesList;
     }
 
     public Page<GameSales> getGameSales(
