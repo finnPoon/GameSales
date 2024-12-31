@@ -62,13 +62,6 @@ public class GameController {
         return gameService.getTotalSales(fromDate, toDate, gameNo);
     }
 
-    //To simulate the daily scheduled run
-    /*@PostMapping("/triggerAggregation")
-    public String triggerAggregation() {
-        dataAggregationService.aggregateDailySales();
-        return "Aggregation triggered successfully!";
-    }*/
-
     //To generate CSV file for testing
     @GetMapping("/generateCSV")
     public String generateCsv() throws IOException {
