@@ -2,7 +2,7 @@ package com.vanguard.vanguardapi.service;
 
 import com.opencsv.CSVWriter;
 import com.vanguard.vanguardapi.entity.GameSales;
-import com.vanguard.vanguardapi.entity.GameSalesAggregated;
+import com.vanguard.vanguardapi.entity.GameSalesSummary;
 import com.vanguard.vanguardapi.repository.GameRepository;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
@@ -25,7 +25,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -143,12 +142,12 @@ public class GameService {
         return gameRepository.findGameSales(fromDate, toDate, salePriceCondition, salePrice, pageable);
     }
 
-    public List<GameSalesAggregated> getTotalSales(
+    public List<GameSalesSummary> getTotalSales(
             LocalDate fromDate,
             LocalDate toDate,
             Integer gameNo) {
 
-        return gameRepository.findAggregatedSales(fromDate, toDate, gameNo);
+        return gameRepository.findGameSalesSummary(fromDate, toDate, gameNo);
     }
 
     // For generating random CSV file for testing

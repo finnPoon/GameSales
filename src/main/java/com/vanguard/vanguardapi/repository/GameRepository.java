@@ -1,7 +1,7 @@
 package com.vanguard.vanguardapi.repository;
 
 import com.vanguard.vanguardapi.entity.GameSales;
-import com.vanguard.vanguardapi.entity.GameSalesAggregated;
+import com.vanguard.vanguardapi.entity.GameSalesSummary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -30,22 +30,13 @@ public interface GameRepository extends JpaRepository<GameSales, Long> {
             @Param("salePrice") BigDecimal salePrice,
             Pageable pageable);
 
-    @Query("SELECT gsa FROM GameSalesAggregated gsa WHERE " +
-            "(:fromDate IS NULL OR gsa.dateOfSale >= :fromDate) AND " +
-            "(:toDate IS NULL OR gsa.dateOfSale <= :toDate) AND " +
-            "(:gameNo IS NULL OR gsa.gameNo = :gameNo)")
-    List<GameSalesAggregated> findAggregatedSales(
+    @Query("SELECT gss FROM GameSalesSummary gss WHERE " +
+            "(:fromDate IS NULL OR gss.dateOfSale >= :fromDate) AND " +
+            "(:toDate IS NULL OR gss.dateOfSale <= :toDate) AND " +
+            "(:gameNo IS NULL OR gss.gameNo = :gameNo)" +
+            "ORDER BY gss.dateOfSale ASC")
+    List<GameSalesSummary> findGameSalesSummary(
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,
             @Param("gameNo") Integer gameNo);
-
-    @Query("SELECT " +
-            "DATE(gs.dateOfSale) AS dateOfSale, " +
-            "gs.gameNo AS gameNo, " +
-            "COUNT(gs) AS totalGamesSold, " +
-            "SUM(gs.salePrice) AS totalSales " +
-            "FROM GameSales gs " +
-            "WHERE DATE(gs.dateOfSale) = :today " +
-            "GROUP BY DATE(gs.dateOfSale), gs.gameNo")
-    List<Object[]> findDailyAggregatedSales(@Param("today") LocalDate today);
 }

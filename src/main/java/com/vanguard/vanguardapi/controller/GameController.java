@@ -1,8 +1,7 @@
 package com.vanguard.vanguardapi.controller;
 
 import com.vanguard.vanguardapi.entity.GameSales;
-import com.vanguard.vanguardapi.entity.GameSalesAggregated;
-import com.vanguard.vanguardapi.service.DataAggregationService;
+import com.vanguard.vanguardapi.entity.GameSalesSummary;
 import com.vanguard.vanguardapi.service.GameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -26,9 +25,6 @@ public class GameController {
 
     @Autowired
     private GameService gameService;
-
-    @Autowired
-    private DataAggregationService dataAggregationService;
 
     @PostMapping("/import")
     public ResponseEntity<String> importCsv(@RequestParam("file") MultipartFile file) {
@@ -58,7 +54,7 @@ public class GameController {
     }
 
     @GetMapping("/getTotalSales")
-    public List<GameSalesAggregated> getTotalSales(
+    public List<GameSalesSummary> getTotalSales(
             @RequestParam(required = false) LocalDate fromDate,
             @RequestParam(required = false) LocalDate toDate,
             @RequestParam(required = false) Integer gameNo) {
@@ -67,11 +63,11 @@ public class GameController {
     }
 
     //To simulate the daily scheduled run
-    @PostMapping("/triggerAggregation")
+    /*@PostMapping("/triggerAggregation")
     public String triggerAggregation() {
         dataAggregationService.aggregateDailySales();
         return "Aggregation triggered successfully!";
-    }
+    }*/
 
     //To generate CSV file for testing
     @GetMapping("/generateCSV")
