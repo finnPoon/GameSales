@@ -6,7 +6,7 @@ take it that the response time requirement are meant for the initial call only. 
 There are many ways to get pre-aggregated data. I wanted to use Materialised view to generate these pre-aggregated data in task 4. But MySQL does not support materialised view. Hence i decided to use a pre-aggregated
 table to store these data with backend computation instead of computing on the fly. For this assignment, i create a daily scheduled event in MySQL to populate the pre-aggregated table.
 
-
+The screenshots for the test result of all the endpoints are in the screenshots folder.
 
 Prerequisites
 --------------
