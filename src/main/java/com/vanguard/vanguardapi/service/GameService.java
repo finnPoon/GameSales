@@ -50,9 +50,6 @@ public class GameService {
         this.dataSource = dataSource;
     }
 
-    private static final int NUM_ROWS = 1000000;
-    private static final Random random = new Random();
-
     public void importCsv(MultipartFile file) throws IOException {
 
         String targetTable = "game_sales";
@@ -65,18 +62,18 @@ public class GameService {
                 IMPORT_FILE_PATH + file.getOriginalFilename(), targetTable
         );
 
-        // Create a new log entry
+        // Keep track of the import status
         CsvImportLog importLog = new CsvImportLog();
         importLog.setFileName(file.getOriginalFilename());
         importLog.setStartTime(LocalDateTime.now());
         importLog.setStatus(CsvImportLog.ImportStatus.IN_PROGRESS);
-        importLog.setCreatedBy("system"); // You can set this to the current user if available
+        importLog.setCreatedBy("system");
         importLog.setCreatedAt(LocalDateTime.now());
 
         // Save the log entry before starting the import
         csvImportLogRepository.save(importLog);
 
-        try (Connection connection = dataSource.getConnection(); // Get connection from DataSource
+        try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
 
             // Enable local file loading if necessary
@@ -93,7 +90,6 @@ public class GameService {
             importLog.setUpdatedBy("system");
             importLog.setUpdatedAt(LocalDateTime.now());
 
-            // Save the updated log entry
             csvImportLogRepository.save(importLog);
 
             System.out.printf("Successfully loaded %d rows into %s%n", rowsAffected, targetTable);
@@ -106,7 +102,6 @@ public class GameService {
             importLog.setUpdatedBy("system");
             importLog.setUpdatedAt(LocalDateTime.now());
 
-            // Save the updated log entry
             csvImportLogRepository.save(importLog);
 
             System.err.println("Database error: " + e.getMessage());
@@ -133,6 +128,9 @@ public class GameService {
 
         return gameRepository.findGameSalesSummary(fromDate, toDate, gameNo);
     }
+
+    private static final int NUM_ROWS = 1000000;
+    private static final Random random = new Random();
 
     // For generating random CSV file for testing
     public String generateCsv() throws IOException {

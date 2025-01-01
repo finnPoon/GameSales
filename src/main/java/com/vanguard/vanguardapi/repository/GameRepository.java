@@ -18,8 +18,7 @@ import java.util.List;
 public interface GameRepository extends JpaRepository<GameSales, Long> {
 
     @Query("SELECT gs FROM GameSales gs WHERE " +
-            "(:fromDate IS NULL OR gs.dateOfSale >= :fromDate) AND " +
-            "(:toDate IS NULL OR gs.dateOfSale <= :toDate) AND " +
+            "(:fromDate IS NULL OR :toDate IS NULL OR gs.dateOfSale BETWEEN :fromDate AND :toDate) AND " +
             "(:salePriceCondition IS NULL OR " +
             "(:salePriceCondition = 'LESS_THAN' AND gs.salePrice < :salePrice) OR " +
             "(:salePriceCondition = 'GREATER_THAN' AND gs.salePrice > :salePrice))")
