@@ -62,7 +62,7 @@ public class GameController {
         return gameService.getTotalSales(fromDate, toDate, gameNo);
     }
 
-    //To generate CSV file for testing
+    //I use this to generate CSV file for testing
     @GetMapping("/generateCSV")
     public String generateCsv() throws IOException {
         String fileName = gameService.generateCsv();

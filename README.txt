@@ -1,8 +1,18 @@
+My notes
+--------
+To boost the efficiency of the GET API call, we can implement Redis cache to cache the data instead of calling the database multiple time. But for this assignment, i
+take it that the response time requirement are meant for the initial call only. Therefore, i did not implement the Cache.
+
+There are many ways to get pre-aggregated data. I wanted to use Materialised view to generate these pre-aggregated data in task 4. But MySQL does not support materialised view. Hence i decided to use a pre-aggregated
+table to store these data with backend computation instead of computing on the fly. For this assignment, i create a daily scheduled event in MySQL to populate the pre-aggregated table.
+
+
+
 Prerequisites
 --------------
 Before you begin, ensure you have met the following requirements:
 
-Java Development Kit (JDK): Version 17 or later is recommended.
+Java Development Kit (JDK): Version 17
 Build Tool: Maven
 Git
 MySQL server
@@ -17,93 +27,11 @@ git clone https://github.com/finnPoon/GameSales.git
 cd your-repository
 
 3) Create your own database schema in MySQL
-4) Run the following scripts to create the necessary tables:
--- Task 1
-CREATE TABLE game_sales (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    game_no INT NOT NULL,
-    game_name VARCHAR(20) NOT NULL,
-    game_code VARCHAR(5) NOT NULL,
-    type INT NOT NULL,
-    cost_price DECIMAL(10, 2) NOT NULL,
-    tax DECIMAL(10, 2) NOT NULL,
-    sale_price DECIMAL(10, 2) NOT NULL,
-    date_of_sale TIMESTAMP NOT NULL
-);
-
-CREATE INDEX idx_date_of_sale ON game_sales (date_of_sale);
-CREATE INDEX idx_sale_price ON game_sales (sale_price);
-
--- Task 2
-CREATE TABLE csv_import_log (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    file_name VARCHAR(255) NOT NULL,
-    start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    end_time TIMESTAMP NULL,
-    status ENUM('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED') DEFAULT 'PENDING',
-    total_rows INT DEFAULT 0,
-    imported_rows INT DEFAULT 0,
-    error_message TEXT,
-    created_by VARCHAR(255),
-    updated_by VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
--- Task 4 (suppose to use materialised view for faster performance but MYSQL does not support this type of view.)
-CREATE TABLE game_sales_summary (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    date_of_sale DATE NOT NULL,
-    game_no INT,
-    total_games_sold INT NOT NULL,
-    total_sales DECIMAL(10, 2) NOT NULL,
-    UNIQUE KEY unique_summary  (date_of_sale, game_no)
-);
-
--- Task 4 (Stored Procedure to refresh the game_sales_summary table after every insertion done for the game_sales table)
-
-DELIMITER //
-CREATE PROCEDURE RefreshGameSalesSummary()
-BEGIN
-    -- Clear the existing data in the materialized view table
-    TRUNCATE TABLE game_sales_summary;
-
-    -- Insert the summarized data for all games
-    INSERT INTO game_sales_summary (date_of_sale, game_no, total_games_sold, total_sales)
-    SELECT
-        DATE(date_of_sale) AS date_of_sale,
-        NULL AS game_no,
-        COUNT(*) AS total_games_sold,
-        SUM(sale_price) AS total_sales
-    FROM game_sales
-    GROUP BY DATE(date_of_sale);
-
-    -- Insert the summarized data for each game_no
-    INSERT INTO game_sales_summary (date_of_sale, game_no, total_games_sold, total_sales)
-    SELECT
-        DATE(date_of_sale) AS date_of_sale,
-        game_no,
-        COUNT(*) AS total_games_sold,
-        SUM(sale_price) AS total_sales
-    FROM game_sales
-    GROUP BY DATE(date_of_sale), game_no;
-END //
-DELIMITER ;
-
--- Task 4 (Create trigger for every successful import status inserted into the csv_import_log table, trigger the refresh of the game_sales_summary table)
-DELIMITER //
-CREATE TRIGGER after_csv_import_completion
-AFTER INSERT ON csv_import_log
-FOR EACH ROW
-BEGIN
-    IF NEW.status = 'COMPLETED' THEN
-        CALL RefreshGameSalesSummary();
-    END IF;
-END//
-DELIMITER ;
+4) Run the scripts in the seeder.sql file under database directory to create the necessary tables and triggers
 
 
-ConfigurationW
+
+Configuration
 ---------------
 Before building and running the application, you might need to configure certain settings:
 
@@ -114,7 +42,8 @@ spring.datasource.password=<your-db-password>
 # Example dbURL
 jdbc:mysql://localhost:3306/vanguard?createDatabaseIfNotExist=true&allowLoadLocalInfile=true
 
-2) Locate the Constants.java file in the src/main/java/com.vanguard.vanguardapi/config. Update the IMPORT_FILE_PATH variable to the path where your Import CSV file will be stored at.
+2) Locate the Constants.java file in the src/main/java/com.vanguard.vanguardapi/config. Update the IMPORT_FILE_PATH variable to the path where your Import CSV file will be stored at. The file i use to test is in
+the testFile directory called game_sales_data.csv
 (Alternatively can remove this variable and create a temp file and trasnfer the content of the MultiPart file over to get the absolute path. But this might deteriorate the performance.)
 
 3) Run the script in MySQL to expand the max allowed packet size to 100MB:
@@ -126,8 +55,9 @@ Building and Running the Application
 1) Navigate to the Project Directory Ensure you are in the root directory of the project.
 2) Build the project
 3) Run the project
+4) Now you can call the endpoint
 
 
-Runtime
+Extras
 --------
 1) You can use the /generateCSV endpoint to generate the CSV file with 1million records for testing if you do not have the test file
